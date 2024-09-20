@@ -14,7 +14,7 @@
             margin: 0;
             background-color: #f0f0f0;
         }
-        .calendar, .unavailable-form, .staff-form {
+        .calendar, .control-panel {
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -25,8 +25,13 @@
         .calendar {
             width: 600px;
         }
-        .unavailable-form, .staff-form {
-            width: 300px;
+        .control-panel {
+            width: 600px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .staff-form, .unavailable-form {
+            width: 45%;
         }
         .header {
             display: flex;
@@ -86,11 +91,22 @@
     </style>
 </head>
 <body>
-    <div class="staff-form">
-        <h3>Set Number of Staff</h3>
-        <label for="staffNumber">Number of Staff:</label>
-        <input type="number" id="staffNumber" min="1" value="4">
-        <button onclick="setStaffNumber()">Set Staff Number</button>
+    <div class="control-panel">
+        <div class="staff-form">
+            <h3>Set Number of Staff</h3>
+            <label for="staffNumber">Number of Staff:</label>
+            <input type="number" id="staffNumber" min="1" value="4">
+            <button onclick="setStaffNumber()">Set Staff Number</button>
+        </div>
+
+        <div class="unavailable-form">
+            <h3>Mark Unavailable Date</h3>
+            <label for="staffSelect">Staff Member:</label>
+            <select id="staffSelect"></select>
+            <label for="unavailableDate">Date:</label>
+            <input type="date" id="unavailableDate">
+            <button onclick="markUnavailable()">Mark as Unavailable</button>
+        </div>
     </div>
 
     <div class="calendar">
@@ -116,15 +132,6 @@
         </table>
     </div>
 
-    <div class="unavailable-form">
-        <h3>Mark Unavailable Date</h3>
-        <label for="staffSelect">Staff Member:</label>
-        <select id="staffSelect"></select>
-        <label for="unavailableDate">Date:</label>
-        <input type="date" id="unavailableDate">
-        <button onclick="markUnavailable()">Mark as Unavailable</button>
-    </div>
-
     <script>
         let currentDate = new Date();
         let staff = ['A', 'B', 'C', 'D'];
@@ -144,7 +151,6 @@
             const schedule = {};
             const availableStaff = staff.filter(member => !isUnavailable(member, date));
 
-            // Remove staff who worked the night shift yesterday
             if (lastDaySchedule.n) {
                 const index = availableStaff.indexOf(lastDaySchedule.n);
                 if (index > -1) availableStaff.splice(index, 1);
@@ -152,20 +158,16 @@
 
             for (let shift of shifts) {
                 if (availableStaff.length === 0) {
-                    // If no staff is available, assign 'X' to the shift
                     schedule[shift] = 'X';
                     continue;
                 }
                 
-                // Sort available staff by the number of times they've worked this shift
                 availableStaff.sort((a, b) => shiftCounts[a][shift] - shiftCounts[b][shift]);
 
                 let selectedStaff;
                 if (shift === 'a' && lastDaySchedule.n) {
-                    // Ensure the person who worked night shift yesterday doesn't work morning shift today
                     selectedStaff = availableStaff.find(s => s !== lastDaySchedule.n);
                 } else {
-                    // Select the staff member with the least number of this shift
                     selectedStaff = availableStaff[0];
                 }
 
@@ -195,8 +197,8 @@
             date.setDate(date.getDate() - date.getDay());
             
             let calendarHTML = '';
-            lastDaySchedule = {}; // Reset for the start of each month view
-            initializeShiftCounts(); // Reset shift counts for each month
+            lastDaySchedule = {};
+            initializeShiftCounts();
             
             while (date <= lastDay || date.getDay() !== 0) {
                 if (date.getDay() === 0) {
@@ -258,7 +260,7 @@
 
         function initializeStaffSelect() {
             const staffSelect = document.getElementById('staffSelect');
-            staffSelect.innerHTML = ''; // Clear existing options
+            staffSelect.innerHTML = '';
             staff.forEach(member => {
                 const option = document.createElement('option');
                 option.value = member;
@@ -273,7 +275,7 @@
                 staff = Array.from({length: staffNumber}, (_, i) => String.fromCharCode(65 + i));
                 initializeStaffSelect();
                 initializeShiftCounts();
-                unavailableDates = {}; // Reset unavailable dates
+                unavailableDates = {};
                 updateCalendar();
             } else {
                 alert("Please enter a valid number of staff (greater than 0).");
