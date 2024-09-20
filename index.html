@@ -66,7 +66,7 @@
             color: white;
         }
         .other-month {
-            color: #aaa;
+            visibility: hidden;
         }
         .shift {
             display: flex;
@@ -100,12 +100,12 @@
         </div>
 
         <div class="unavailable-form">
-            <h3>Mark Unavailable Date</h3>
+            <h3>Mark/Unmark Unavailable Date</h3>
             <label for="staffSelect">Staff Member:</label>
             <select id="staffSelect"></select>
             <label for="unavailableDate">Date:</label>
             <input type="date" id="unavailableDate">
-            <button onclick="markUnavailable()">Mark as Unavailable</button>
+            <button onclick="toggleUnavailable()">Toggle Unavailable</button>
         </div>
     </div>
 
@@ -205,7 +205,8 @@
                     calendarHTML += '<tr>';
                 }
                 
-                const className = date.getMonth() !== currentDate.getMonth() ? 'other-month' : '';
+                const isOtherMonth = date.getMonth() !== currentDate.getMonth();
+                const className = isOtherMonth ? 'other-month' : '';
                 const schedule = getShiftSchedule(date);
                 const dateString = date.toISOString().split('T')[0];
                 const unavailableStaff = staff.filter(member => isUnavailable(member, date));
@@ -214,12 +215,14 @@
                 calendarHTML += `
                     <td class="${className} ${unavailableClass}">
                         <div class="date">${date.getDate()}</div>
-                        <div class="shift">
-                            <span class="shift-a">a: ${schedule.a}</span>
-                            <span class="shift-p">p: ${schedule.p}</span>
-                            <span class="shift-n">n: ${schedule.n}</span>
-                        </div>
-                        ${unavailableStaff.length > 0 ? `<div class="unavailable-staff">Unavailable: ${unavailableStaff.join(', ')}</div>` : ''}
+                        ${!isOtherMonth ? `
+                            <div class="shift">
+                                <span class="shift-a">a: ${schedule.a}</span>
+                                <span class="shift-p">p: ${schedule.p}</span>
+                                <span class="shift-n">n: ${schedule.n}</span>
+                            </div>
+                            ${unavailableStaff.length > 0 ? `<div class="unavailable-staff">Unavailable: ${unavailableStaff.join(', ')}</div>` : ''}
+                        ` : ''}
                     </td>
                 `;
                 
@@ -235,6 +238,8 @@
 
         function changeMonth(delta) {
             currentDate.setMonth(currentDate.getMonth() + delta);
+            lastDaySchedule = {};
+            initializeShiftCounts();
             updateCalendar();
         }
 
@@ -243,7 +248,7 @@
             return unavailableDates[member] && unavailableDates[member].includes(dateString);
         }
 
-        function markUnavailable() {
+        function toggleUnavailable() {
             const staffMember = document.getElementById('staffSelect').value;
             const date = document.getElementById('unavailableDate').value;
             
@@ -251,8 +256,15 @@
                 unavailableDates[staffMember] = [];
             }
             
-            if (!unavailableDates[staffMember].includes(date)) {
+            const index = unavailableDates[staffMember].indexOf(date);
+            if (index > -1) {
+                // Date is already marked as unavailable, so remove it
+                unavailableDates[staffMember].splice(index, 1);
+                console.log(`Unmarked ${date} for ${staffMember}`);
+            } else {
+                // Date is not marked as unavailable, so add it
                 unavailableDates[staffMember].push(date);
+                console.log(`Marked ${date} as unavailable for ${staffMember}`);
             }
             
             updateCalendar();
@@ -276,6 +288,7 @@
                 initializeStaffSelect();
                 initializeShiftCounts();
                 unavailableDates = {};
+                lastDaySchedule = {};
                 updateCalendar();
             } else {
                 alert("Please enter a valid number of staff (greater than 0).");
