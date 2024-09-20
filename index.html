@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monthly Calendar</title>
+    <title>Shift Schedule Calendar</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
         }
@@ -20,7 +20,8 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 20px;
             max-width: 100%;
-            width: 300px;
+            width: 600px;
+            margin-bottom: 20px;
         }
         .header {
             display: flex;
@@ -28,7 +29,7 @@
             align-items: center;
             margin-bottom: 10px;
         }
-        .header button {
+        .header button, .unavailable-form button {
             background-color: #4CAF50;
             border: none;
             color: white;
@@ -48,16 +49,41 @@
         th, td {
             text-align: center;
             padding: 8px;
+            border: 1px solid #ddd;
         }
         th {
             background-color: #4CAF50;
             color: white;
         }
-        td {
-            border: 1px solid #ddd;
-        }
         .other-month {
             color: #aaa;
+        }
+        .shift {
+            display: flex;
+            flex-direction: column;
+        }
+        .shift span {
+            font-size: 12px;
+            margin: 1px 0;
+        }
+        .shift-a { color: #1e90ff; }
+        .shift-p { color: #32cd32; }
+        .shift-n { color: #ff69b4; }
+        .unavailable {
+            background-color: #ffcccb;
+        }
+        .unavailable-form {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            max-width: 100%;
+            width: 300px;
+        }
+        .unavailable-form label, .unavailable-form select, .unavailable-form input {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
         }
     </style>
 </head>
@@ -84,9 +110,71 @@
             </tbody>
         </table>
     </div>
+    <div class="unavailable-form">
+        <h3>Mark Unavailable Date</h3>
+        <label for="staffSelect">Staff Member:</label>
+        <select id="staffSelect"></select>
+        <label for="unavailableDate">Date:</label>
+        <input type="date" id="unavailableDate">
+        <button onclick="markUnavailable()">Mark as Unavailable</button>
+    </div>
 
     <script>
         let currentDate = new Date();
+        const staff = ['A', 'B', 'C', 'D'];
+        const shifts = ['a', 'p', 'n'];
+        let lastDaySchedule = {};
+        let shiftCounts = {};
+        let unavailableDates = {};
+
+        function initializeShiftCounts() {
+            shiftCounts = {};
+            for (let member of staff) {
+                shiftCounts[member] = { a: 0, p: 0, n: 0 };
+            }
+        }
+
+        function getShiftSchedule(date) {
+            const schedule = {};
+            const availableStaff = staff.filter(member => !isUnavailable(member, date));
+
+            // Remove staff who worked the night shift yesterday
+            if (lastDaySchedule.n) {
+                const index = availableStaff.indexOf(lastDaySchedule.n);
+                if (index > -1) availableStaff.splice(index, 1);
+            }
+
+            for (let shift of shifts) {
+                if (availableStaff.length === 0) {
+                    // If no staff is available, assign 'X' to the shift
+                    schedule[shift] = 'X';
+                    continue;
+                }
+                
+                // Sort available staff by the number of times they've worked this shift
+                availableStaff.sort((a, b) => shiftCounts[a][shift] - shiftCounts[b][shift]);
+
+                let selectedStaff;
+                if (shift === 'a' && lastDaySchedule.n) {
+                    // Ensure the person who worked night shift yesterday doesn't work morning shift today
+                    selectedStaff = availableStaff.find(s => s !== lastDaySchedule.n);
+                } else {
+                    // Select the staff member with the least number of this shift
+                    selectedStaff = availableStaff[0];
+                }
+
+                if (selectedStaff) {
+                    schedule[shift] = selectedStaff;
+                    shiftCounts[selectedStaff][shift]++;
+                    availableStaff.splice(availableStaff.indexOf(selectedStaff), 1);
+                } else {
+                    schedule[shift] = 'X';
+                }
+            }
+
+            lastDaySchedule = {...schedule};
+            return schedule;
+        }
 
         function updateCalendar() {
             const monthYear = document.getElementById('monthYear');
@@ -101,6 +189,8 @@
             date.setDate(date.getDate() - date.getDay());
             
             let calendarHTML = '';
+            lastDaySchedule = {}; // Reset for the start of each month view
+            initializeShiftCounts(); // Reset shift counts for each month
             
             while (date <= lastDay || date.getDay() !== 0) {
                 if (date.getDay() === 0) {
@@ -108,7 +198,22 @@
                 }
                 
                 const className = date.getMonth() !== currentDate.getMonth() ? 'other-month' : '';
-                calendarHTML += `<td class="${className}">${date.getDate()}</td>`;
+                const schedule = getShiftSchedule(date);
+                const dateString = date.toISOString().split('T')[0];
+                const unavailableStaff = staff.filter(member => isUnavailable(member, date));
+                const unavailableClass = unavailableStaff.length > 0 ? 'unavailable' : '';
+                
+                calendarHTML += `
+                    <td class="${className} ${unavailableClass}">
+                        <div class="date">${date.getDate()}</div>
+                        <div class="shift">
+                            <span class="shift-a">a: ${schedule.a}</span>
+                            <span class="shift-p">p: ${schedule.p}</span>
+                            <span class="shift-n">n: ${schedule.n}</span>
+                        </div>
+                        ${unavailableStaff.length > 0 ? `<div class="unavailable-staff">Unavailable: ${unavailableStaff.join(', ')}</div>` : ''}
+                    </td>
+                `;
                 
                 if (date.getDay() === 6) {
                     calendarHTML += '</tr>';
@@ -125,6 +230,37 @@
             updateCalendar();
         }
 
+        function isUnavailable(member, date) {
+            const dateString = date.toISOString().split('T')[0];
+            return unavailableDates[member] && unavailableDates[member].includes(dateString);
+        }
+
+        function markUnavailable() {
+            const staffMember = document.getElementById('staffSelect').value;
+            const date = document.getElementById('unavailableDate').value;
+            
+            if (!unavailableDates[staffMember]) {
+                unavailableDates[staffMember] = [];
+            }
+            
+            if (!unavailableDates[staffMember].includes(date)) {
+                unavailableDates[staffMember].push(date);
+            }
+            
+            updateCalendar();
+        }
+
+        function initializeStaffSelect() {
+            const staffSelect = document.getElementById('staffSelect');
+            staff.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member;
+                option.textContent = member;
+                staffSelect.appendChild(option);
+            });
+        }
+
+        initializeStaffSelect();
         updateCalendar();
     </script>
 </body>
