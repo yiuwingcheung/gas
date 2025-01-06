@@ -3,300 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shift Schedule Calendar</title>
+    <title>Fuel Calculator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .calendar, .control-panel {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 20px auto;
             padding: 20px;
-            max-width: 100%;
-            margin-bottom: 20px;
         }
-        .calendar {
-            width: 600px;
+        .input-group {
+            margin-bottom: 15px;
         }
-        .control-panel {
-            width: 600px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .staff-form, .unavailable-form {
-            width: 45%;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .header button, .unavailable-form button, .staff-form button {
-            background-color: #4CAF50;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            text-align: center;
-            text-decoration: none;
+        label {
             display: inline-block;
-            font-size: 14px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
+            width: 120px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        input {
+            padding: 5px;
+            width: 100px;
         }
-        th, td {
-            text-align: center;
-            padding: 8px;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .other-month {
-            visibility: hidden;
-        }
-        .shift {
-            display: flex;
-            flex-direction: column;
-        }
-        .shift span {
-            font-size: 12px;
-            margin: 1px 0;
-        }
-        .shift-a { color: #1e90ff; }
-        .shift-p { color: #32cd32; }
-        .shift-n { color: #ff69b4; }
-        .unavailable {
-            background-color: #ffcccb;
-        }
-        .unavailable-form label, .unavailable-form select, .unavailable-form input,
-        .staff-form label, .staff-form input {
-            display: block;
-            margin-bottom: 10px;
-            width: 100%;
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
         }
     </style>
 </head>
 <body>
-    <div class="control-panel">
-        <div class="staff-form">
-            <h3>Set Number of Staff</h3>
-            <label for="staffNumber">Number of Staff:</label>
-            <input type="number" id="staffNumber" min="1" value="4">
-            <button onclick="setStaffNumber()">Set Staff Number</button>
-        </div>
-
-        <div class="unavailable-form">
-            <h3>Mark/Unmark Unavailable Date</h3>
-            <label for="staffSelect">Staff Member:</label>
-            <select id="staffSelect"></select>
-            <label for="unavailableDate">Date:</label>
-            <input type="date" id="unavailableDate">
-            <button onclick="toggleUnavailable()">Toggle Unavailable</button>
-        </div>
+    <h2>油價計算器</h2>
+    
+    <div class="input-group">
+        <label>油價:</label>
+        <input type="number" id="price" value="25" step="0.01">
     </div>
 
-    <div class="calendar">
-        <div class="header">
-            <button onclick="changeMonth(-1)">Previous</button>
-            <h2 id="monthYear"></h2>
-            <button onclick="changeMonth(1)">Next</button>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Sun</th>
-                    <th>Mon</th>
-                    <th>Tue</th>
-                    <th>Wed</th>
-                    <th>Thu</th>
-                    <th>Fri</th>
-                    <th>Sat</th>
-                </tr>
-            </thead>
-            <tbody id="calendarBody">
-            </tbody>
-        </table>
+    <h3>Caltex RedCard ONLY</h3>
+    
+    <div class="input-group">
+        <label>優惠($):</label>
+        <input type="number" id="discount" value="7" step="0.01">
+    </div>
+    
+    <div class="input-group">
+        <label>每($):</label>
+        <input type="number" id="amount" value="350" step="0.01">
+    </div>
+    
+    <div class="input-group">
+        <label>減($):</label>
+        <input type="number" id="reduction" value="50" step="0.01">
+    </div>
+
+    <div class="result">
+        <p>入油 (L): <span id="liters">14.00</span></p>
+        <p>折實 ($ / L): <span id="actualPrice">23.21</span></p>
+        <p>折扣 ($ / L): <span id="totalDiscount">-1.79</span></p>
     </div>
 
     <script>
-        let currentDate = new Date();
-        let staff = ['A', 'B', 'C', 'D'];
-        const shifts = ['a', 'p', 'n'];
-        let lastDaySchedule = {};
-        let shiftCounts = {};
-        let unavailableDates = {};
+        function calculate() {
+            const price = parseFloat(document.getElementById('price').value);
+            const discount = parseFloat(document.getElementById('discount').value);
+            const amount = parseFloat(document.getElementById('amount').value);
+            const reduction = parseFloat(document.getElementById('reduction').value);
 
-        function initializeShiftCounts() {
-            shiftCounts = {};
-            for (let member of staff) {
-                shiftCounts[member] = { a: 0, p: 0, n: 0 };
-            }
+            // B8 = amount/price
+            const liters = amount/price;
+            
+            // B9 = (amount-reduction-(amount-reduction)/price*discount)/liters
+            const actualPrice = (amount-reduction-(amount-reduction)/price*discount)/liters;
+            
+            // B10 = actualPrice - price
+            const totalDiscount = actualPrice - price;
+
+            document.getElementById('liters').textContent = liters.toFixed(2);
+            document.getElementById('actualPrice').textContent = actualPrice.toFixed(2);
+            document.getElementById('totalDiscount').textContent = totalDiscount.toFixed(2);
         }
 
-        function getShiftSchedule(date) {
-            const schedule = {};
-            const availableStaff = staff.filter(member => !isUnavailable(member, date));
+        // Add event listeners to all inputs
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', calculate);
+        });
 
-            if (lastDaySchedule.n) {
-                const index = availableStaff.indexOf(lastDaySchedule.n);
-                if (index > -1) availableStaff.splice(index, 1);
-            }
-
-            for (let shift of shifts) {
-                if (availableStaff.length === 0) {
-                    schedule[shift] = 'X';
-                    continue;
-                }
-                
-                availableStaff.sort((a, b) => shiftCounts[a][shift] - shiftCounts[b][shift]);
-
-                let selectedStaff;
-                if (shift === 'a' && lastDaySchedule.n) {
-                    selectedStaff = availableStaff.find(s => s !== lastDaySchedule.n);
-                } else {
-                    selectedStaff = availableStaff[0];
-                }
-
-                if (selectedStaff) {
-                    schedule[shift] = selectedStaff;
-                    shiftCounts[selectedStaff][shift]++;
-                    availableStaff.splice(availableStaff.indexOf(selectedStaff), 1);
-                } else {
-                    schedule[shift] = 'X';
-                }
-            }
-
-            lastDaySchedule = {...schedule};
-            return schedule;
-        }
-
-        function updateCalendar() {
-            const monthYear = document.getElementById('monthYear');
-            const calendarBody = document.getElementById('calendarBody');
-            
-            monthYear.textContent = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            
-            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-            
-            let date = new Date(firstDay);
-            date.setDate(date.getDate() - date.getDay());
-            
-            let calendarHTML = '';
-            lastDaySchedule = {};
-            initializeShiftCounts();
-            
-            while (date <= lastDay || date.getDay() !== 0) {
-                if (date.getDay() === 0) {
-                    calendarHTML += '<tr>';
-                }
-                
-                const isOtherMonth = date.getMonth() !== currentDate.getMonth();
-                const className = isOtherMonth ? 'other-month' : '';
-                const schedule = getShiftSchedule(date);
-                const dateString = date.toISOString().split('T')[0];
-                const unavailableStaff = staff.filter(member => isUnavailable(member, date));
-                const unavailableClass = unavailableStaff.length > 0 ? 'unavailable' : '';
-                
-                calendarHTML += `
-                    <td class="${className} ${unavailableClass}">
-                        <div class="date">${date.getDate()}</div>
-                        ${!isOtherMonth ? `
-                            <div class="shift">
-                                <span class="shift-a">a: ${schedule.a}</span>
-                                <span class="shift-p">p: ${schedule.p}</span>
-                                <span class="shift-n">n: ${schedule.n}</span>
-                            </div>
-                            ${unavailableStaff.length > 0 ? `<div class="unavailable-staff">Unavailable: ${unavailableStaff.join(', ')}</div>` : ''}
-                        ` : ''}
-                    </td>
-                `;
-                
-                if (date.getDay() === 6) {
-                    calendarHTML += '</tr>';
-                }
-                
-                date.setDate(date.getDate() + 1);
-            }
-            
-            calendarBody.innerHTML = calendarHTML;
-        }
-
-        function changeMonth(delta) {
-            currentDate.setMonth(currentDate.getMonth() + delta);
-            lastDaySchedule = {};
-            initializeShiftCounts();
-            updateCalendar();
-        }
-
-        function isUnavailable(member, date) {
-            const dateString = date.toISOString().split('T')[0];
-            return unavailableDates[member] && unavailableDates[member].includes(dateString);
-        }
-
-        function toggleUnavailable() {
-            const staffMember = document.getElementById('staffSelect').value;
-            const date = document.getElementById('unavailableDate').value;
-            
-            if (!unavailableDates[staffMember]) {
-                unavailableDates[staffMember] = [];
-            }
-            
-            const index = unavailableDates[staffMember].indexOf(date);
-            if (index > -1) {
-                // Date is already marked as unavailable, so remove it
-                unavailableDates[staffMember].splice(index, 1);
-                console.log(`Unmarked ${date} for ${staffMember}`);
-            } else {
-                // Date is not marked as unavailable, so add it
-                unavailableDates[staffMember].push(date);
-                console.log(`Marked ${date} as unavailable for ${staffMember}`);
-            }
-            
-            updateCalendar();
-        }
-
-        function initializeStaffSelect() {
-            const staffSelect = document.getElementById('staffSelect');
-            staffSelect.innerHTML = '';
-            staff.forEach(member => {
-                const option = document.createElement('option');
-                option.value = member;
-                option.textContent = member;
-                staffSelect.appendChild(option);
-            });
-        }
-
-        function setStaffNumber() {
-            const staffNumber = parseInt(document.getElementById('staffNumber').value);
-            if (staffNumber > 0) {
-                staff = Array.from({length: staffNumber}, (_, i) => String.fromCharCode(65 + i));
-                initializeStaffSelect();
-                initializeShiftCounts();
-                unavailableDates = {};
-                lastDaySchedule = {};
-                updateCalendar();
-            } else {
-                alert("Please enter a valid number of staff (greater than 0).");
-            }
-        }
-
-        initializeStaffSelect();
-        updateCalendar();
+        // Initial calculation
+        calculate();
     </script>
 </body>
 </html>
