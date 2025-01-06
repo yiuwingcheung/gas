@@ -22,10 +22,31 @@
             padding: 5px;
             width: 100px;
         }
+        /* Remove spinner arrows from number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
         .result {
             margin-top: 20px;
             padding: 10px;
             background-color: #f0f0f0;
+        }
+        .result-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .result-label {
+            width: 120px;
+        }
+        .result-value {
+            width: 100px;
+            text-align: right;
         }
     </style>
 </head>
@@ -41,23 +62,36 @@
     
     <div class="input-group">
         <label>優惠($):</label>
-        <input type="number" id="discount" value="7" step="0.5">
+        <input type="number" id="discount" value="7" step="0.01">
     </div>
     
     <div class="input-group">
         <label>每($):</label>
-        <input type="number" id="amount" value="350" step="50">
+        <input type="number" id="amount" value="350" step="0.01">
     </div>
     
     <div class="input-group">
         <label>減($):</label>
-        <input type="number" id="reduction" value="50" step="10">
+        <input type="number" id="reduction" value="50" step="0.01">
     </div>
 
     <div class="result">
-        <p>入油 (L): <span id="liters"> </span></p>
-        <p>折實 ($ / L): <span id="actualPrice"> </span></p>
-        <p>折扣 ($ / L): <span id="totalDiscount"> </span></p>
+        <div class="result-row">
+            <span class="result-label">入油 (L):</span>
+            <span class="result-value" id="liters">13.46</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">折實 ($ / L):</span>
+            <span class="result-value" id="actualPrice">24.13</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">折扣 ($ / L):</span>
+            <span class="result-value" id="totalDiscount">-1.87</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">實付 ($):</span>
+            <span class="result-value" id="finalAmount">324.94</span>
+        </div>
     </div>
 
     <script>
@@ -76,9 +110,13 @@
             // B10 = actualPrice - price
             const totalDiscount = actualPrice - price;
 
+            // B11 = liters * actualPrice
+            const finalAmount = liters * actualPrice;
+
             document.getElementById('liters').textContent = liters.toFixed(2);
             document.getElementById('actualPrice').textContent = actualPrice.toFixed(2);
             document.getElementById('totalDiscount').textContent = totalDiscount.toFixed(2);
+            document.getElementById('finalAmount').textContent = finalAmount.toFixed(2);
         }
 
         // Add event listeners to all inputs
